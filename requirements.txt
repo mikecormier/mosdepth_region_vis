@@ -1,0 +1,10 @@
+mosdepth
+pyranges
+pandas
+numpy
+pysam
+scipy
+psutil
+requests
+matplotlib
+plotly
