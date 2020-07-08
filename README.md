@@ -2,7 +2,7 @@
 
 
 ### Run Mosdepth
-``
+```
 mosdepth \
     --by 500 \
     -t 4 \
