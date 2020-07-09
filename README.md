@@ -28,6 +28,15 @@ mosdepth \
 
 ```
 
+### Tabix each sample file
+
+```
+tabix sample-01.per-base.bed.gz 
+tabix sample-02.per-base.bed.gz 
+tabix sample-03.per-base.bed.gz 
+
+```
+
 ### Run region vis script
 ```
 python plot_region_info.py \

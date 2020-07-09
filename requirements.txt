@@ -8,3 +8,4 @@ psutil
 requests
 matplotlib
 plotly
+htslib
