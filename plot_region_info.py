@@ -1031,80 +1031,23 @@ def get_regions_from_genes(gene_list,
     
 ## Template for regions added to an html file (This populations the region selector button)
 available_regions_template = """
-                      <a class="dropdown-item" href="#{region}">{region}</a>"""
+                      <option>{region}</option>"""
 
-## Template for each regions divs
-div_template = """    <div class="container-fluid p-3">
-        <div class="row pt-3">
-            <div class="col-6">
-                <h4 id="{reg}"> REGION: {reg}</h4>
-                <div id="{reg}_1"></div>
-            </div>
-            <div class="col-sm-6">
-                <div id="{reg}_2"></div>
-            </div>
-        </div>
-        <div class="row pt-3">
-            <div class="col-6">
-                <h4>      </h4>
-                <div id="{reg}_3"></div>
-            </div>
-            <div class="col-6">
-                <div id="{reg}_4"></div>
-            </div>
-        </div>
-        <div class="row pt-3">
-            <div class="col-12">
-                <h4>  </h4>
-                <div class=big_div id="{reg}_5"></div>
-            </div>
-        </div>
-        {toggle_div}
-        <div class="row">
-            <div class="col-lg-12">
-                <h4>  </h4>
-                <div class=big_div id="{reg}_6"></div>
-            </div>
-        </div>
-        <div class="row h-10">
-            <div class=row-boardered></div>
-        </div>
-    </div>
-    <a href="#top" class="btn btn-outline-primary">Back to Top</a>
-    <hr style="color:blue;background-color:black;border-width:2.5">
+plotly_script_if_template = """if (region_name == '${region}') {
+            
+            low_cov_count = ${low_cov}
+            header.innerHTML = '${region}'
 
-"""
+            ${pplots}
+        }"""
 
-## Template for low coverage toggle div
-low_covearge_toggle_event_div = """
+plotly_script_else_template = """ else if (region_name == '${region}') {
+            
+            low_cov_count = ${low_cov}
+            header.innerHTML = '${region}'
 
-        <div class="row">
-            <div class="col-10">
-            </div>
-            <div class="col-2">
-                <h5><u> Low Coverage Bars </u></h5>
-                <input id="{toggle_reg}_toggle-event" type="checkbox" checked data-toggle="toggle" data-on="Displaying" data-off="NOT Dispalying"  data-size="small" data-onstyle="danger", data-offstyle="info">
-            </div>
-        </div>
-"""
-
-## Template turning on and off low coverage bars
-low_coverage_toggle_js_tempalte = """
-
-$$("#${toggle_reg}_toggle-event").change(function() {
-
-    toggled_on = $$(this).prop('checked')
-
-    var div = document.getElementById("${reg}_6");
-
-    var update = {}
-    for (i = 0; i < ${shape_num}; i++){
-        update[`shapes[$${i}].visible`] = toggled_on;
-    }
-    Plotly.relayout(div,update)
-})
-"""
-
+            ${pplots}
+        }"""
 
 #---------------------------------------------------------------------------------------------------------------------------------
 ## Main
@@ -1229,6 +1172,8 @@ def main():
     available_regions = ""
     region_divs = ""
     plotly_plots = ""
+    filled_plotly_template = ""
+    first_region = ""
 
     ## Iterate over each region
     for i,region in enumerate(regions):
@@ -1263,40 +1208,45 @@ def main():
                                               sample_list, 
                                               sample_colors, 
                                               region_dict)
-        kde_plotly_js = extract_plotly_plot_from_html(kde_html_string, base_div_id + "_1")
-        plotly_plots += kde_plotly_js + "\n\n" 
+        #kde_plotly_js = extract_plotly_plot_from_html(kde_html_string, base_div_id + "_1")
+        kde_plotly_js = extract_plotly_plot_from_html(kde_html_string, "div_1")
+        plotly_plots += "\t\t" + kde_plotly_js + "\n\n" 
 
         print("\t- Plotting KDE z-score coverage distribution")
         kde_z_score_html_string, z_scores_per_base_per_sample = plot_z_score_distribution(by_sample_coverage, 
                                                                                           sample_list, 
                                                                                           sample_colors, 
                                                                                           region_dict)
-        kde_z_score_plotly_js = extract_plotly_plot_from_html(kde_z_score_html_string, base_div_id + "_3")
-        plotly_plots += kde_z_score_plotly_js + "\n\n" 
+        #kde_z_score_plotly_js = extract_plotly_plot_from_html(kde_z_score_html_string, base_div_id + "_3")
+        kde_z_score_plotly_js = extract_plotly_plot_from_html(kde_z_score_html_string, "div_3")
+        plotly_plots += "\t\t\t" + kde_z_score_plotly_js + "\n\n" 
 
         print("\t- Generating General Stats Table")
         table_html_string, max_coverage_value, has_low_coverage = get_plotly_table(by_sample_coverage, 
                                                                                    sample_list, 
                                                                                    args.lch_cutoff)
-        table_js = extract_plotly_plot_from_html(table_html_string, base_div_id + "_2")
-        plotly_plots += table_js + "\n\n" 
+       # table_js = extract_plotly_plot_from_html(table_html_string, base_div_id + "_2")
+        table_js = extract_plotly_plot_from_html(table_html_string, "div_2")
+        plotly_plots += "\t\t\t" +  table_js + "\n\n" 
 
 
         print("\t- Plotting proportion of bases covered")
-        proportion_html_string = plot_porportion_coverage(by_sample_coverage, 
+        proportion_html_string = "\t\t\t" + plot_porportion_coverage(by_sample_coverage, 
                                                           sample_list, 
                                                           sample_colors, 
                                                           region_dict)
-        proportion_plotly_js = extract_plotly_plot_from_html(proportion_html_string, base_div_id + "_4")
-        plotly_plots += proportion_plotly_js + "\n\n" 
+        #proportion_plotly_js = extract_plotly_plot_from_html(proportion_html_string, base_div_id + "_4")
+        proportion_plotly_js = extract_plotly_plot_from_html(proportion_html_string, "div_4")
+        plotly_plots += "\t\t\t" + proportion_plotly_js + "\n\n" 
 
         print("\t- Plotting sample vs sample per base coverage")
         sample_vs_sample_html_string = plot_sample_vs_sample_per_base_coverage(by_sample_coverage, 
                                                                                sample_list, 
                                                                                sample_colors, 
                                                                                region_dict)
-        sample_vs_sample_plotly_js = extract_plotly_plot_from_html(sample_vs_sample_html_string, base_div_id + "_5")
-        plotly_plots += sample_vs_sample_plotly_js + "\n\n" 
+        #sample_vs_sample_plotly_js = extract_plotly_plot_from_html(sample_vs_sample_html_string, base_div_id + "_5")
+        sample_vs_sample_plotly_js = extract_plotly_plot_from_html(sample_vs_sample_html_string, "div_5")
+        plotly_plots += "\t\t\t" + sample_vs_sample_plotly_js + "\n\n" 
 
         print("\t- Plotting regional coverage by base per sample")
         region_html_string, count_low_cov_shapes  = plot_per_base_coverage(by_sample_coverage, 
@@ -1307,24 +1257,31 @@ def main():
                                                                            args.lch_cutoff, 
                                                                            max_coverage_value,
                                                                            has_low_coverage)
-        region_plotly_js = extract_plotly_plot_from_html(region_html_string, base_div_id + "_6")
-        plotly_plots += region_plotly_js + "\n\n" 
-
+        #region_plotly_js = extract_plotly_plot_from_html(region_html_string, base_div_id + "_6")
+        region_plotly_js = extract_plotly_plot_from_html(region_html_string, "div_6")
+        plotly_plots += "\t\t\t" + region_plotly_js + "\n\n" 
 
         ## Add template info
         print("\t- Updating html template")
         available_regions += available_regions_template.format(region = base_div_id)
 
-        ## Add low coverage toggle
-        if has_low_coverage:
-            ## Add toggle 
-            plotly_plots += string.Template(low_coverage_toggle_js_tempalte).substitute(toggle_reg = base_div_id.strip().replace(" ","").replace(":","-"), 
-                                                                                        reg = base_div_id, 
-                                                                                        shape_num = count_low_cov_shapes) + "\n\n"
-
-            region_divs += div_template.format(reg = base_div_id, toggle_div = low_covearge_toggle_event_div.format(toggle_reg = base_div_id.strip().replace(" ","").replace(":","-"), reg = base_div_id))
+        ## Plots to tempalte 
+        if not filled_plotly_template:
+            #filled_plotly_template += plotly_script_if_template.format(region = base_div_id, low_cov = count_low_cov_shapes, pplots = plotly_plots)  
+            filled_plotly_template += string.Template(plotly_script_if_template).substitute(region = base_div_id, 
+                                                                                            low_cov = count_low_cov_shapes, 
+                                                                                            pplots = plotly_plots)  
+            plotly_plots = ""
         else:
-            region_divs += div_template.format(reg = base_div_id, toggle_div = "") 
+            #filled_plotly_template += plotly_script_else_template.format(region = base_div_id, low_cov = count_low_cov_shapes, pplots = plotly_plots)  
+            filled_plotly_template += string.Template(plotly_script_else_template).substitute(region = base_div_id, 
+                                                                                              low_cov = count_low_cov_shapes, 
+                                                                                              pplots = plotly_plots)  
+            plotly_plots = ""
+
+        ## get the first region to plot
+        if not first_region:
+            first_region = base_div_id
 
         ## If not combining html files
         if not args.combine:
@@ -1333,8 +1290,10 @@ def main():
             tmpl_dict = dict()
 
             tmpl_dict["region_references"] = available_regions
-            tmpl_dict["region_div"] = region_divs
-            tmpl_dict["plotly_plots"] = plotly_plots
+            tmpl_dict["first_region"] = first_region 
+            tmpl_dict["plotly_plots"] = filled_plotly_template
+            tmpl_dict["region_num"] = 1
+
 
             try:
                 tmpl = string.Template(open(args.tmpl).read())
@@ -1354,7 +1313,8 @@ def main():
             ## Reset  temnplate strings
             available_regions = ""
             region_divs = ""
-            plotly_plots = ""
+            first_region = ""
+            filled_plotly_template = ""
             
 
     ## If combining html plots into a single html file
@@ -1363,8 +1323,9 @@ def main():
         tmpl_dict = dict()
 
         tmpl_dict["region_references"] = available_regions
-        tmpl_dict["region_div"] = region_divs
-        tmpl_dict["plotly_plots"] = plotly_plots
+        tmpl_dict["plotly_plots"] = filled_plotly_template
+        tmpl_dict["first_region"] = first_region 
+        tmpl_dict["region_num"] = len(regions)
 
         try:
             tmpl = string.Template(open(args.tmpl).read())

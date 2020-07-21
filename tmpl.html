@@ -42,23 +42,113 @@
 <body> 
     <h1> Mosdepth regional coverage info </h1>
         <div class="container-fluid p-3">
-            <div class="dropdown">
-                <button class="btn btn-secondary dropdown-toggle" type="button" id="dropdownMenuButton" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                Available Regions
-                </button>
-                <div class="dropdown-menu" aria-labelledby="dropdownMenuButton">
-                     $region_references
+        <div class="row pt-3">
+            <div class="col-4">
+                <div class="form-group">
+                    <label for="regionfilter">Available Regions</label>
+                    <select class="form-control" id="regionfilter">
+                         $region_references
+                    </select>
                 </div>
+            </div>
+            <div class="col-2"></div>
+            <div class="col-6 pt-6">
+                <h4> Number of regions = $region_num</h4>
             </div>
         </div>
     <hr>
-    $region_div
+    <div class="container-fluid p-3">
+        <div class="row pt-3">
+            <div class="col-6">
+                <h4 id="region_header"> REGION: </h4>
+                <div id="div_1"></div>
+            </div>
+            <div class="col-sm-6">
+                <div id="div_2"></div>
+            </div>
+        </div>
+        <div class="row pt-3">
+            <div class="col-6">
+                <h4>      </h4>
+                <div id="div_3"></div>
+            </div>
+            <div class="col-6">
+                <div id="div_4"></div>
+            </div>
+        </div>
+        <div class="row pt-3">
+            <div class="col-12">
+                <h4>  </h4>
+                <div class=big_div id="div_5"></div>
+            </div>
+        </div>
+
+        <div id="low_covearge_selection" class="row">
+            <div class="col-10">
+            </div>
+            <div class="col-2">
+                <h5><u> Low Coverage Bars </u></h5>
+                <input id="low_cov_button" type="checkbox" checked data-toggle="toggle" data-on="Displaying" data-off="NOT Dispalying"  data-size="small" data-onstyle="danger", data-offstyle="info">
+            </div>
+        </div>
+
+        <div class="row">
+            <div class="col-lg-12">
+                <h4>  </h4>
+                <div class=big_div id="div_6"></div>
+            </div>
+        </div>
+        <div class="row h-10">
+            <div class=row-boardered></div>
+        </div>
+    </div>
+    <a href="#top" class="btn btn-outline-primary">Back to Top</a>
+    <hr style="color:blue;background-color:black;border-width:2.5">
+
 </body>
                 
 
 <script>
 
-$plotly_plots
+    var low_cov_count = 0
+
+    function selectRegion(region_name) {
+
+        var header = document.getElementById("region_header")
+
+        $plotly_plots
+
+    };
+
+
+
+
+    $("#low_cov_button").change(function() {
+
+        toggled_on = $(this).prop('checked')
+        var div = document.getElementById("div_6");
+        var update = {}
+        for (i = 0; i < low_cov_count; i++){
+            update[`shapes[${i}].visible`] = toggled_on;
+        };   
+        Plotly.relayout(div,update)
+    });
+
+
+
+    jQuery(document).ready(function(){
+        selectRegion('$first_region')
+    });
+
+
+    //If the Selected Transcript filter changes, update data
+    $("#regionfilter").on('change', function(e) {
+        var selectedValue = this.value
+        selectRegion(selectedValue)
+
+    });
+
+    
 
 </script>
 
