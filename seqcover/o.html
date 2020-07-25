@@ -9,12 +9,14 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/js/standalone/selectize.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/protovis/3.3.1/protovis.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.16.0/d3.min.js"></script>
     <style>
 
     .big_div {
           height: 80vh;
         }
-
+    
     html,body { height: 100%; margin: 0px; padding: 0px; }
     .form-control.selectize-control {
         padding: 5px 6px 0px;
@@ -28,7 +30,6 @@
     </style>
 </head>
 <body>
-
     <h1> SEQCOVER </h1>
         <div class="container-fluid p-3">
         <div class="row pt-3 pl-3">
@@ -37,18 +38,23 @@
             </div>
         </div>
     <hr>
-    <div class="container-fluid h-100">
+    <div class="container-fluid p-1">
         <div class="row pt-3">
-            <div class="col6">
+            <div class="col-6">
                 <h4 id="region_header"> REGION: </h4>
             </div>
         </div>
-        <div class="row h-100">
-                <div class="col h-100">
-                    <div class=big_div id="gene_plot"></div>
-                    <div class=big_div id="gene_plot2"></div>
-                </div>
+        <div class="row">
+            <div class="col-12">
+                <div class=big_div id="gene_plot"></div>
             </div>
+        </div>
+        <div class="row pt-3">
+            <div class="col-6" id="kde_plot">
+            </div>
+            <div class="col-6" id="proportion_plot">
+            </div>
+        </div>
     </div>
 </body>
 
@@ -58,11 +64,14 @@
 
     var nan = NaN; // hack to support json dumped with NaN values.
 
-    var region_index_map = {};
-
-
+    /*
+    ------------------------------------------------------------------------------------------------------------------
+                                                        SETUP 
+    ------------------------------------------------------------------------------------------------------------------
+    */
 
     //Get gene/region names and add them to the available regions form 
+    var region_index_map = {};
     var select = $('<select class="form-control" id="regionselect"></select>');
     var index_map = {};
     for (index in plot_data) {
@@ -89,9 +98,11 @@
     $("#regionfilter").append(select);
 
 
-
-
-
+    /*
+    ------------------------------------------------------------------------------------------------------------------
+                                                      Plot Functions 
+    ------------------------------------------------------------------------------------------------------------------
+    */
 
     //by base depth plot layout
     function get_gene_plot_layout(gene) {
@@ -104,7 +115,7 @@
                 columns: 1,
             },
             autosize: true,
-            margin: {t: 30, pad: 0, l: 150, r: 30},
+            margin: {t: 30, pad: 0, l: 150},
             xaxis: {
                 tickmode: "array",
                 tickvals: [gene.plot_coords.x[0], gene.plot_coords.x[mid], gene.plot_coords.x[gene.plot_coords.x.length - 10]],
@@ -113,24 +124,22 @@
             },
             yaxis: {
                 title: "Depth",
-                domain: [0.61,1.0]
+                domain: [0.55,0.90]
             },
             yaxis2: {
                 title: "Merged<br>Transcripts",
                 range: [-8,8],
-                //showline: false,
-                //showgrid: false,
                 showlegend: false,
                 tickvals: [1],
                 showticklabels: false,
                 ticktext: gene.unioned_transcript.transcript,
-                domain: [0.45,0.6],
+                domain: [0.4,0.55],
 
             },
             yaxis3: {
                 range: [0,2],
                 showlegend: false,
-                domain: [0.0,0.44]
+                domain: [0.0,0.40]
             },
             hovermode: 'closest',
             showlegend: true,
@@ -154,6 +163,8 @@
     function get_by_position_depth_trace(gene) {
 
         var traces = [];
+
+        console.log(gene.plot_coords.depths)
 
         for (sample in gene.plot_coords.depths) {
             var dp = gene.plot_coords.depths[sample]
@@ -195,6 +206,7 @@
     };
 
     
+    //Get the transcript shapes for the current region
     function get_transcript_shapes(gene) {
 
         var top = 10;
@@ -206,24 +218,21 @@
         var strandArray = [];
 
         for (transcript of gene.transcripts) {
-            console.log(transcript)
                 
             // Transcript 
             shapes.push({type: "line", x0: transcript.txstart, x1: transcript.txend, 
                          y0: bottom + 1, y1: bottom + 1, line_color: "black",yref: "y3"}) 
 
-
-            //Strnd info
+            //Strand info
             var strand_interval = Math.round((transcript.txend - transcript.txstart) / 20)
             var strand_marker = transcript.strand > 0 ? ">" : "<";
             for (i = transcript.txstart; i < transcript.txend; i++) {
                 if (i % strand_interval == 0) {
 
-                    strandArray.push({x: i, y: bottom + 1.017, text: strand_marker, font: {color: "black", size: 16}, opacity: 0.7, showarrow: false, yref: "y3"})
+                    strandArray.push({x: i, y: bottom + 1.001, text: strand_marker, font: {color: "black", size: 16}, opacity: 0.7, showarrow: false, yref: "y3"})
 
                 };
             };
-
 
             //Exons
             transcript.position.forEach(p => shapes.push({type: "rect", x0: p[0], x1: p[1], 
@@ -235,13 +244,11 @@
             tick_labels.push("Need A transcript label")
             tick_vals.push(bottom + 1)
 
-
+            //update bottom 
             bottom = bottom - 1 
         };
 
-
         return({"shapes": shapes, "top": top, "bottom": bottom, "tick_labels": tick_labels, "tick_vals": tick_vals, "strand_annotation": strandArray})
-
 
     };
 
@@ -251,7 +258,96 @@
     // Add low coverage highlight? 
     // Include other transcripts that ovlerap the reigon that are not apart of the gene of interest? 
     //Update xaxis tick labels when zooming in. (Have no idea what position I am looking at when zoomed in)
+
+
+    //Calculate the kernal density estimator values for an array of depths
+    function get_kde_values(kernel, thresholds, data) {
+      var results = {x:[],y:[]}
+      thresholds.map(function(t) {
+        results["x"].push(t);
+        results["y"].push(d3.mean(data, d => kernel(t - d)));
+      });
+      return(results)
+    };
+
+
+    //Kernal Density Estimator epanechnikov calculation
+    function epanechnikov(bandwidth) {
+      return x => Math.abs(x /= bandwidth) <= 1 ? 0.75 * (1 - x * x) / bandwidth : 0;
+    };
+
+
+    //per sample depth distribution using kernal density estimation     
+    function get_kde_traces(gene) {
+
+        var traces = []
+
+        for (sample in gene.plot_coords.depths) {
+            
+            // Depths 
+            var dp = gene.plot_coords.depths[sample]
+
+            //Convert null values to NaN 
+            dp = dp.map(function(v) { return v < -1000 ? NaN : v})
+            
+            //Remove NaNs
+            dp = dp.filter(value => !Number.isNaN(value));
+                
+            //get min and max depths
+            var mindp = Math.min.apply(Math,dp);
+            var maxdp = Math.max.apply(Math,dp);
+
+            //get kde values for the current sample's depths. (epanechnikov set to 7)
+            var kde_values =  get_kde_values(epanechnikov(7),pv.range(mindp,maxdp), dp)
+
+            //create trace
+            var trace = {x: kde_values.x, y: kde_values.y, mode: "lines", 
+                         name: sample, line: {width: 1}, hovertemplate: "<b>Depth</b>:%{x}"}
+
+            traces.push(trace)
+
+        };
+
+        return(traces)
+    };
+
+
+    //by kde plot layout
+    function get_kde_layout() {
+
+        var layout = {
+            autosize: true,
+            title: "Depth Distribution per Sample",
+            xaxis: {
+                title: "Depth"
+            },
+            yaxis: {
+                title: "KDE value",
+                domain: [0.0,0.9],
+            },
+            hovermode: 'closest',
+            showlegend: true,
+            legend: {
+                xanchor: "right",
+                yanchor: "top",
+                y: 1,
+                x: 1,
+                orientation: "h",
+                borderwidth: 1,
+                bordercolor: '#eeeeee'
+            },
+        };
+
+        return(layout)
+
+    };
     
+
+    /*
+    ------------------------------------------------------------------------------------------------------------------
+                                                     Plot Controllers 
+    ------------------------------------------------------------------------------------------------------------------
+    */
 
     //Per base depth plot with transcript annotations
     function plot_per_base_depth(gene) {
@@ -291,6 +387,26 @@
     };
 
 
+    //Depth Distribution plots using kde 
+    function plot_kde_distribution(gene) {
+
+        //Get kde plot trace per sample 
+        var kde_traces = get_kde_traces(gene)
+
+        //Get the plot layout for the kde plot
+        var kde_layout = get_kde_layout()
+
+        Plotly.newPlot("kde_plot", kde_traces, kde_layout)
+
+    };
+        
+
+    /*
+    ------------------------------------------------------------------------------------------------------------------
+                                                     Event Handling 
+    ------------------------------------------------------------------------------------------------------------------
+    */
+
     //Controller function for generating gene/region sepecific plots
     function generate_plots(selected_region) {
 
@@ -305,11 +421,13 @@
         //Plot per base depths 
         plot_per_base_depth(selectedGene)
 
-
-
+        //Plot kde distrubtion 
+        plot_kde_distribution(selectedGene)
 
     };
 
+
+    //Load first region
     jQuery(document).ready(function(){
 
         //Plot first gene
@@ -322,8 +440,6 @@
 
 
     });
-
-
 
 
     //Select gene/region change
