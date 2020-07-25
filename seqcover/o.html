@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta name="author" content="Brent Pedersen" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/css/selectize.bootstrap3.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css">
+    <script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/selectize.js/0.12.6/js/standalone/selectize.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/js/bootstrap.bundle.min.js"></script>
+    <style>
+
+    .big_div {
+          height: 80vh;
+        }
+
+    html,body { height: 100%; margin: 0px; padding: 0px; }
+    .form-control.selectize-control {
+        padding: 5px 6px 0px;
+        height: unset !important;
+    }
+    .remove-single {
+        color: gray !important;
+        top: -1px !important;
+        font-size: 20px !important;
+    }
+    </style>
+</head>
+<body>
+
+    <h1> SEQCOVER </h1>
+        <div class="container-fluid p-3">
+        <div class="row pt-3 pl-3">
+            <div class="form-group", id="regionfilter">
+                <label for="regionfilter">Gene/Region Selection</label>
+            </div>
+        </div>
+    <hr>
+    <div class="container-fluid h-100">
+        <div class="row pt-3">
+            <div class="col6">
+                <h4 id="region_header"> REGION: </h4>
+            </div>
+        </div>
+        <div class="row h-100">
+                <div class="col h-100">
+                    <div class=big_div id="gene_plot"></div>
+                    <div class=big_div id="gene_plot2"></div>
+                </div>
+            </div>
+    </div>
+</body>
+
+<script src="o.js"></script>
+
+<script>
+
+    var nan = NaN; // hack to support json dumped with NaN values.
+
+    var region_index_map = {};
+
+
+
+    //Get gene/region names and add them to the available regions form 
+    var select = $('<select class="form-control" id="regionselect"></select>');
+    var index_map = {};
+    for (index in plot_data) {
+
+        //Get region gene info
+        var symbol = plot_data[index].symbol;
+        var chrom = plot_data[index].unioned_transcript.chr;
+        var genomic_positions = plot_data[index].plot_coords.g;
+        var start = Math.min.apply(null,genomic_positions.filter(Boolean));
+        var end = Math.max(...genomic_positions);
+
+        //Get region string
+        var region_string = symbol + " "+ chrom + ":" + start + "-" + end
+
+        //Store the index of the region in the plot data object.
+        region_index_map[region_string] = index 
+        
+        //Add region to select options
+        var option = $("<option>" + region_string + "</option>");
+        select.append(option)
+    }
+
+    //Add new select options to regionfilter div
+    $("#regionfilter").append(select);
+
+
+
+
+
+
+    //by base depth plot layout
+    function get_gene_plot_layout(gene) {
+
+        var mid = Math.round(gene.plot_coords.x.length / 2)
+
+        var layout = {
+            grid: {
+                rows: 3,
+                columns: 1,
+            },
+            autosize: true,
+            margin: {t: 30, pad: 0, l: 150, r: 30},
+            xaxis: {
+                tickmode: "array",
+                tickvals: [gene.plot_coords.x[0], gene.plot_coords.x[mid], gene.plot_coords.x[gene.plot_coords.x.length - 10]],
+                ticktext: [gene.plot_coords.g[0], gene.plot_coords.g[mid], gene.plot_coords.g[gene.plot_coords.x.length - 10]],
+                title: "Chromosome " + String(gene.unioned_transcript.chr).replace("chr","")
+            },
+            yaxis: {
+                title: "Depth",
+                domain: [0.61,1.0]
+            },
+            yaxis2: {
+                title: "Merged<br>Transcripts",
+                range: [-8,8],
+                //showline: false,
+                //showgrid: false,
+                showlegend: false,
+                tickvals: [1],
+                showticklabels: false,
+                ticktext: gene.unioned_transcript.transcript,
+                domain: [0.45,0.6],
+
+            },
+            yaxis3: {
+                range: [0,2],
+                showlegend: false,
+                domain: [0.0,0.44]
+            },
+            hovermode: 'closest',
+            showlegend: true,
+            legend: {
+                xanchor: "right",
+                yanchor: "top",
+                y: 1,
+                x: 1,
+                orientation: "h",
+                borderwidth: 1,
+                bordercolor: '#eeeeee'
+            },
+        };
+
+        return(layout)
+
+    };
+
+
+    //Get a by position trace per sample of depth 
+    function get_by_position_depth_trace(gene) {
+
+        var traces = [];
+
+        for (sample in gene.plot_coords.depths) {
+            var dp = gene.plot_coords.depths[sample]
+            dp = dp.map(function(v) { return v < -1000 ? NaN : v})
+
+            var trace = {x: gene.plot_coords.x, text: gene.plot_coords.g, y: dp, 
+                type: 'scatter', mode:'lines', name: sample, line: {width: 1},
+                hovertemplate: '<b>position</b>:%{text}<br><b>depth</b>:%{y}<br>(debug) x: %{x}',
+                hoverinfo:"text",
+                yaxis: "y",
+            };
+
+            traces.push(trace);
+        };
+
+        return(traces)
+
+    };
+
+
+    //Get the unioned transcript shapes
+    function get_unioned_transcript_shapes(gene) {
+
+        let transcript_color = 'rgb(100, 100, 100)';
+        let cds_color = 'rgb(100, 100, 255)';
+        let exon_color = 'rgb(200, 100, 255)';
+        var yoff = 1;
+        var shapes = [];
+        var tr = gene.unioned_transcript;
+
+        shapes.push({type: 'rect', x0: tr.txstart, x1: tr.txstop, y0: yoff-0.1, y1: yoff+0.1, line: {color: transcript_color}, yref: "y2" })
+        shapes.push({type: 'rect', x0: tr.cdsstart, x1: tr.cdsstop, y0: yoff-1, y1: yoff+1, line: {color: cds_color},  yref: "y2"})
+
+        tr.position.forEach(p => shapes.push({type: "rect", x0: p[0], x1: p[1], y0: yoff-2, y1:yoff+2 ,
+                                              fillcolor: exon_color, line: {color:exon_color}, yref: "y2"}))
+
+        return(shapes)
+
+    };
+
+    
+    function get_transcript_shapes(gene) {
+
+        var top = 10;
+        var bottom = 8;
+        var offset = 0.25;
+        var shapes = [];
+        var tick_labels = [];
+        var tick_vals = [];
+        var strandArray = [];
+
+        for (transcript of gene.transcripts) {
+            console.log(transcript)
+                
+            // Transcript 
+            shapes.push({type: "line", x0: transcript.txstart, x1: transcript.txend, 
+                         y0: bottom + 1, y1: bottom + 1, line_color: "black",yref: "y3"}) 
+
+
+            //Strnd info
+            var strand_interval = Math.round((transcript.txend - transcript.txstart) / 20)
+            var strand_marker = transcript.strand > 0 ? ">" : "<";
+            for (i = transcript.txstart; i < transcript.txend; i++) {
+                if (i % strand_interval == 0) {
+
+                    strandArray.push({x: i, y: bottom + 1.017, text: strand_marker, font: {color: "black", size: 16}, opacity: 0.7, showarrow: false, yref: "y3"})
+
+                };
+            };
+
+
+            //Exons
+            transcript.position.forEach(p => shapes.push({type: "rect", x0: p[0], x1: p[1], 
+                                                         y0: bottom + (1 - offset), y1: bottom + (1 + offset), 
+                                                         line_color: "black", fillcolor: "black", yref: "y3"})) 
+                
+            //Get tick labels
+            //tick_labels.push(transcript.transcript_id)
+            tick_labels.push("Need A transcript label")
+            tick_vals.push(bottom + 1)
+
+
+            bottom = bottom - 1 
+        };
+
+
+        return({"shapes": shapes, "top": top, "bottom": bottom, "tick_labels": tick_labels, "tick_vals": tick_vals, "strand_annotation": strandArray})
+
+
+    };
+
+    //Need transcript ids for tick labels
+    //Need to fix PIGA's transcript 2, which has a txstart and txend that are negative
+    //Hover info for each exon? 
+    // Add low coverage highlight? 
+    // Include other transcripts that ovlerap the reigon that are not apart of the gene of interest? 
+    //Update xaxis tick labels when zooming in. (Have no idea what position I am looking at when zoomed in)
+    
+
+    //Per base depth plot with transcript annotations
+    function plot_per_base_depth(gene) {
+
+        //Get gene specific layout
+        plot_gene_layout = get_gene_plot_layout(gene)
+
+        //Get gene specific depth traces
+        by_position_depth_traces = get_by_position_depth_trace(gene)
+
+        //Add empty subplots 
+        by_position_depth_traces.push({yaxis: "y2"})
+        by_position_depth_traces.push({yaxis: "y3"})
+
+        // get unionized transcript shapes
+        unioned_transcript_shapes = get_unioned_transcript_shapes(gene)
+        
+        // Get per transcript annotation shapes
+        transcript_map = get_transcript_shapes(gene)
+
+        //Add shapes to layout 
+        plot_gene_layout.shapes = unioned_transcript_shapes.concat(transcript_map.shapes)
+
+        //Adjuste subplot 3 yaxis ranges based on the number of annotated  transcripts 
+        plot_gene_layout.yaxis3.range = [transcript_map.bottom, transcript_map.top]
+
+        //Add subplot 3 yaxis tick labels (transcript ids)
+        plot_gene_layout.yaxis3.tickvals = transcript_map.tick_vals
+        plot_gene_layout.yaxis3.ticktext = transcript_map.tick_labels
+
+        //Add subplot 3 strand annotations 
+        plot_gene_layout.annotations = transcript_map.strand_annotation
+
+        //Plot by base depth 
+        Plotly.newPlot("gene_plot", by_position_depth_traces, plot_gene_layout)
+
+    };
+
+
+    //Controller function for generating gene/region sepecific plots
+    function generate_plots(selected_region) {
+
+        //Update region specific header  
+        var header = document.getElementById("region_header")
+        header.innerHTML = selected_region
+        
+        //Index of plot in plot_data and gene data
+        var plotIndex = region_index_map[selected_region];
+        var selectedGene = plot_data[plotIndex];
+
+        //Plot per base depths 
+        plot_per_base_depth(selectedGene)
+
+
+
+
+    };
+
+    jQuery(document).ready(function(){
+
+        //Plot first gene
+        for (region in region_index_map){
+            if (region_index_map[region] == 0) {
+                generate_plots(region)
+                break
+            };
+        };
+
+
+    });
+
+
+
+
+    //Select gene/region change
+    $("#regionselect").on('change', function(e) {
+        var selectedValue = this.value
+
+        //Plot the selected region
+        generate_plots(selectedValue)
+
+    });
+
+</script>
+
+</body>
+</html>
