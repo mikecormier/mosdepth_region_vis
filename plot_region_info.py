@@ -1412,7 +1412,8 @@ def main():
             )
 
     ## Get samples
-    samples = [x.strip().split(".")[0] for x in args.input]
+    print("INPUT: ", ", ".join(args.input))
+    samples = [os.path.basename(x).strip().split(".")[0] for x in args.input]
     print(
         "\nProcessing region coverage for samples:\n\t- {}\n".format(
             "\n\t- ".join(samples)
@@ -1479,7 +1480,7 @@ def main():
 
             sample_object = pysam.TabixFile(sample_file)
 
-            sample_list.append(sample_file.strip().split(".")[0])
+            sample_list.append(os.path.basename(sample_file).strip().split(".")[0])
             by_sample_coverage.append(
                 get_sample_region_coverage(sample_object, region_dict)
             )
