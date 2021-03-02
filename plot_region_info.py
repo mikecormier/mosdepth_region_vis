@@ -92,7 +92,7 @@ def get_args():
         "--lch-cutoff",
         metavar="Low Coverage Highlight Cutoff",
         default=10,
-        help="A coverage value cutoff, where any coverage at or bellow the cutoff will be highlighted in per base region plot. (Default = 10)",
+        help="A coverage value cutoff, where any coverage at or below the cutoff will be highlighted in per base region plot. (Default = 10)",
     )
 
     parser.add_argument(
@@ -1322,7 +1322,7 @@ def main():
             "\n>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>"
         )
         print(
-            "**WARNING** The '--combine' argument has been set. All regions will be written to a single html file. This may make the html file to large to load"
+            "**WARNING** The '--combine' argument has been set. All regions will be written to a single html file. This may make the html file too large to load"
         )
         print(
             "<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<"

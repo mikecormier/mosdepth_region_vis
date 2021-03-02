@@ -29,7 +29,7 @@ software requirements for this tool.
 
 Installing with conda:
 ```
-conda install --file requirements.txt 
+conda install --file https://raw.githubusercontent.com/mikecormier/mosdepth_region_vis/master/requirements.txt 
 ```
 
 ### Step 1: Per-base Coverage
@@ -64,6 +64,7 @@ mosdepth \
 ```
 
 Next, the per-base bed files need to be tabixed for quick interval lookup. 
+Make sure that you tabix the *per-base* bed file. 
 ```
 tabix sample-01.per-base.bed.gz 
 tabix sample-02.per-base.bed.gz 
@@ -71,11 +72,18 @@ tabix sample-03.per-base.bed.gz
 
 ```
 
-### Step 2: Generate interactive html file
+### Step 2: Download Scripts
 
 With the tabixed per-base files, use the `plot_regions_info.py` script and the `tmpl.html` file to generate an interactive html file.
-Download the `plot_regions_info.py` script and the `tmpl.html` file from this repository. The `plot_regions_info.py` file will use 
-the `tmpl.html` to generate the final html file.
+
+First you need to download the `plot_regions_info.py` script and the `tmpl.html` file from this repository. 
+```
+wget https://raw.githubusercontent.com/mikecormier/mosdepth_region_vis/master/plot_region_info.py
+
+wget https://raw.githubusercontent.com/mikecormier/mosdepth_region_vis/master/tmpl.htm
+```
+
+The `plot_regions_info.py` file will use the `tmpl.html` to generate the final html file.
 
 The input parameters include: 
 ```
@@ -158,6 +166,27 @@ NOTE: if you use the `--combine` parameters the output file will be quite large.
 be generated for each region or gene.
 
 
+### Step 3: Generate interactive html file
+
+The `plot_region_info.py` script generates a few plots for each gene/region. Every sample included in the parameters will be plotted for each gene.
+
+The script will generate the following figures for each gene:
+
+    - A table of descriptive statistic for each sample
+    - A Kernel Density Plot histogram of coverage for each sample
+    - A z-score adjusted Kernel Density Plot histogram of coverage for each sample
+    - A plot for each sample showing the proportion of bases for a region covered at a certain coverage cutoff
+    - Sample vs Sample per base coverage value plot. Used to detect any outlier coverage 
+    - A region/gene plot with the per-base across the region. A gene track is included along with a per-base coverage track for each sample. 
+
+
+Each plot is interactive with hover information, zooming, scaling, and other features. 
+
+The most popular plot is the gene + coverage track plot. This shows where within the genic region the coverage changes. Any bases that fall 
+below a user defined cutoff will be highlighted. Zooming along the genomic position is coordinate across the different tracks. 
+
+NOTE:
+    The `tmpl.html` file needs to be in the same directory where the `plot_region_info.py` file is. If it is not then the script won't be able to find it.
 
 An example of generate a combined html file:
 ```
@@ -171,9 +200,16 @@ python plot_region_info.py \
 
 NOTE: 
     
-    - The `<gtf-file>` variable above represents a gtf-file to use for annotations. (This needs to be the same genome build used to align the files)
-    - The `<gene-file>` variable above represents a file of gene names to look at.  
+    - The <gtf-file> variable above represents a gtf-file to use for annotations. (This needs to be the same genome build used to align the files)
+    - The <gene-file> variable above represents a file of gene names to look at.  
 
+
+
+### Step 4: Interactive Visualization 
+
+With the new file created you can now start exploring the per sample coverage across different genes or regions of interest. 
+
+Here is an example of the html output. This output includes 3 random samples from the 1000G project and a few random genes. 
 
 
 
