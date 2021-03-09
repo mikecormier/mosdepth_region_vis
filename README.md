@@ -209,7 +209,8 @@ NOTE:
 
 With the new file created you can now start exploring the per sample coverage across different genes or regions of interest. 
 
-Here is an example of the html output. This output includes 3 random samples from the 1000G project and a few random genes. 
+[Here is an example of the html output. This output includes 3 random samples from the 1000G project for 3 random genes](https://mikecormier.github.io/mosdepth_region_vis/example_output/index.html) 
+
 
 
 
